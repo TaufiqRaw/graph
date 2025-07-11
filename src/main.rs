@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs};
+use std::{fs};
 
 use crate::graph::AdjacencyList;
 
@@ -9,13 +9,16 @@ fn main() {
     let graph = AdjacencyList::load(file);
     
     let mut n_edge = 0usize;
-    let entry = RefCell::from(vec![0usize; graph.len()]);
-
-    graph.dfs("Mulligan", |v, t_entry|{
-        entry.borrow_mut()[v.idx()] = t_entry;
-    }, |v, t_exit|{
-        println!("{} has descentdant = {}", v.label(), (t_exit - entry.borrow()[v.idx()])/2);
-    }, |_|{
+    graph.dfs("Mulligan", |v|{
+        print!("{}", v.data.label());
+        let mut parent = v.parent();
+        while parent.is_some() {
+            let v = parent.unwrap();
+            print!(" -> {}", v.data.label());
+            parent = v.parent();
+        } 
+        println!("");
+    }, |_|{}, |_|{
         n_edge += 1;
     });
     println!("n edge = {}", n_edge);

@@ -1,11 +1,10 @@
-use std::{cell::RefCell, clone, collections::HashMap, fmt::Debug, fs::{self, File}, io::{self, BufRead, BufReader, Read}, rc::{self, Rc}, vec};
+use std::{collections::HashMap, fmt::Debug, fs::{File}, io::{self, BufRead, BufReader, Read}};
 mod traversal;
 
 
-type VertCell = RefCell<Vertex>;
 #[derive(Debug)]
 pub struct AdjacencyList {
-    vertices : Vec<Rc<VertCell>>,
+    vertices : Vec<Vertex>,
     directed : bool,
     weighted : bool,
     vertex_label_idx : HashMap<String, usize>
@@ -16,7 +15,7 @@ impl AdjacencyList {
         let mut file_read = BufReader::new(file);
         
         let opt = parse_opt(&mut file_read).unwrap();
-        let mut vertices: Vec<Rc<VertCell>> = Vec::new();
+        let mut vertices: Vec<Vertex> = Vec::new();
         let mut file = String::new();
         file_read.read_to_string(&mut file).unwrap();
 
@@ -36,7 +35,7 @@ impl AdjacencyList {
             for label in line {
                 if !vertex_label_idx.contains_key(label) {
                     let curr_idx = vertices.len();
-                    vertices.push(Rc::new(RefCell::new(Vertex::new(curr_idx, label.to_string()))));
+                    vertices.push(Vertex::new(curr_idx, label.to_string()));
                     vertex_label_idx.insert(label.to_string(), curr_idx);
                 }
             }
@@ -58,12 +57,13 @@ impl AdjacencyList {
             assert!(vertex_label_idx.contains_key(line[1]));
 
             let (x, y) = (vertex_label_idx[line[0]], vertex_label_idx[line[1]]);
-            if vertices[x].borrow().edges.iter().any(|v|v.vertex.upgrade().unwrap() == vertices[y]){
+            if vertices[x].edges.iter().any(|e|e.target_idx == y){
                 continue;
             }
-            vertices[x].borrow_mut().edges.push(Edge { vertex: Rc::downgrade(&vertices[y]), weight: 0 });
+
+            vertices[x].edges.push(Edge { target_idx : y, weight: 0 });
             if !opt.directed || bidirected {
-                vertices[y].borrow_mut().edges.push(Edge { vertex : Rc::downgrade(&vertices[x]), weight : 0});
+                vertices[y].edges.push(Edge { target_idx : x, weight : 0});
             }
         };
         AdjacencyList { 
@@ -72,11 +72,6 @@ impl AdjacencyList {
             weighted : opt.weighted,
             vertex_label_idx : vertex_label_idx
         }
-    }
-    pub fn count_ref(&self) {
-        for el in &self.vertices {
-            println!("{}", rc::Rc::strong_count(&el));
-        };
     }
     pub fn len(&self) -> usize {
         self.vertices.len()
@@ -104,13 +99,13 @@ fn parse_opt(file : &mut BufReader<File>) -> io::Result<ParseOpt> {
     Ok(ParseOpt {directed, weighted})
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Edge {
-    vertex : rc::Weak<VertCell>,
+    target_idx : usize,
     weight : i32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Vertex {
     idx : usize,
     label  : String,
@@ -138,15 +133,5 @@ impl PartialEq for Vertex {
     }
     fn ne(&self, other: &Self) -> bool {
         self.idx != other.idx
-    }
-}
-
-impl Debug for Vertex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let edges: Vec<String> = self.edges.iter().map(|e| e.vertex.upgrade().unwrap().borrow().label.clone()).collect();
-        let res = f.debug_struct(&format!("{}", self.label))
-            .field("edges", &edges)
-            .finish();
-        res
     }
 }

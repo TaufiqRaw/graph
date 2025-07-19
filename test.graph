@@ -1,6 +1,7 @@
-[DIRECTED]
-Stevie -> Duke;
-Duke <-> Ella;
-Ella <-> Vaughan;
-Mulligan -> Chet;
-Mulligan <-> Stevie;
+[WEIGHTED;]
+Mulligan -> Duke; 10
+Mulligan -> Stevie; 6
+Mulligan -> Chet; 5
+Stevie -> Duke; 7
+Duke -> Vaughan; 4
+Mulligan -> Vaughan; 5

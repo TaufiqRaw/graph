@@ -13,8 +13,8 @@ impl AdjacencyList {
     pub fn bfs(
         &self,
         label: &str,
-        mut early_vertex: impl FnMut(&Vertex),
-        mut late_vertex: impl FnMut(&Vertex),
+        mut early_vertex: impl FnMut(TraversalVert),
+        mut late_vertex: impl FnMut(TraversalVert),
         mut process_edge: impl FnMut(&Edge),
     ) {
         assert!(self.vertex_label_idx.contains_key(label));
@@ -27,7 +27,7 @@ impl AdjacencyList {
         let mut queue = VecDeque::from(vec![&self.vertices[vertex_idx]]);
         while !queue.is_empty() {
             let vertex = queue.pop_front().unwrap();
-            early_vertex(&vertex);
+            early_vertex(TraversalVert { data: vertex, g: self, parents: &parents, states: &states });
             for edge in &vertex.edges {
                 let child = &self.vertices[edge.target_idx];
 
@@ -38,7 +38,7 @@ impl AdjacencyList {
                     queue.push_back(child);
                 }
             }
-            late_vertex(&vertex);
+            late_vertex(TraversalVert { data: vertex, g: self, parents: &parents, states: &states });
             states[vertex.idx()] = VertexState::Processed;
         }
     }
@@ -46,8 +46,8 @@ impl AdjacencyList {
     pub fn dfs(
         &self,
         label: &str,
-        mut early_vertex: impl FnMut(DfsVert),
-        mut late_vertex: impl FnMut(DfsVert),
+        mut early_vertex: impl FnMut(TraversalVert),
+        mut late_vertex: impl FnMut(TraversalVert),
         mut process_edge: impl FnMut(&Edge),
     ) {
         assert!(self.vertex_label_idx.contains_key(label));
@@ -71,12 +71,12 @@ impl AdjacencyList {
         vertex: &Vertex,
         states: &mut Vec<VertexState>,
         parents: &mut Vec<Option<usize>>,
-        early_vertex: &mut impl FnMut(DfsVert),
-        late_vertex: &mut impl FnMut(DfsVert),
+        early_vertex: &mut impl FnMut(TraversalVert),
+        late_vertex: &mut impl FnMut(TraversalVert),
         process_edge: &mut impl FnMut(&Edge),
     ) {
         states[vertex.idx()] = VertexState::Discovered;
-        early_vertex(DfsVert { data: vertex, g: self, parents: &parents, states: &states });
+        early_vertex(TraversalVert { data: vertex, g: self, parents: &parents, states: &states });
         for edge in &vertex.edges {
             process_edge(&edge);
             let next_vertex = &self.vertices[edge.target_idx];
@@ -92,12 +92,12 @@ impl AdjacencyList {
                 );
             }
         }
-        late_vertex(DfsVert { data: vertex, g: self, parents: &parents, states: &states});
+        late_vertex(TraversalVert { data: vertex, g: self, parents: &parents, states: &states});
         states[vertex.idx] = VertexState::Processed;
     }
 }
 
-pub struct DfsVert<'a> {
+pub struct TraversalVert<'a> {
     pub data : &'a Vertex,
 
     g : &'a AdjacencyList,
@@ -105,12 +105,12 @@ pub struct DfsVert<'a> {
     states : &'a Vec<VertexState>,
 }
 
-impl<'a> DfsVert<'a> {
-    pub fn parent(&self) -> Option<DfsVert<'a>> {
+impl<'a> TraversalVert<'a> {
+    pub fn parent(&self) -> Option<TraversalVert<'a>> {
         let parent_idx = self.parents[self.data.idx]?;
         let parent_vert = &self.g.vertices[parent_idx];
         Some(
-            DfsVert { data: parent_vert, g: self.g, parents: self.parents, states: self.states}
+            TraversalVert { data: parent_vert, g: self.g, parents: self.parents, states: self.states}
         )
     }
     pub fn state(&self) -> &VertexState {

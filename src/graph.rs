@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, fs::{File}, io::{self, BufRead, BufReader, Read}};
 mod traversal;
+mod minimum_spanning;
 
 
 #[derive(Debug)]
@@ -7,6 +8,7 @@ pub struct AdjacencyList {
     vertices : Vec<Vertex>,
     directed : bool,
     weighted : bool,
+    nonnegative : bool,
     vertex_label_idx : HashMap<String, usize>
 }
 
@@ -40,36 +42,48 @@ impl AdjacencyList {
                 }
             }
         }
-
+        let mut nonnegative = true;
         for line in file.lines() {
-            let line = line
+            let line : Vec<&str> = line
                 .split(";")
-                .nth(0)
-                .unwrap();
+                .collect();
+            
+            let mut weight = 0;
+            if opt.weighted {
+                assert!(line.len() >= 2);
+                weight = line[1].trim().parse().unwrap();
+                if weight < 0 {
+                    nonnegative = false;
+                }
+            }else {
+                assert!(line.len() >= 1);
+            }
 
             // bidirected is <->, while normal (forward) is ->, no backward
-            let bidirected = line.contains("<->");
-            let line : Vec<&str> = line.split("-")
+            let edge = line[0];
+            let bidirected = edge.contains("<->");
+            let edge_vertices : Vec<&str> = edge.split("-")
                 .map(|s|s.trim_matches(&['<', '>', ' ']))
                 .collect();
 
-            assert!(line.len() == 2);
-            assert!(vertex_label_idx.contains_key(line[1]));
+            assert!(edge_vertices.len() == 2);
+            assert!(vertex_label_idx.contains_key(edge_vertices[1]));
 
-            let (x, y) = (vertex_label_idx[line[0]], vertex_label_idx[line[1]]);
+            let (x, y) = (vertex_label_idx[edge_vertices[0]], vertex_label_idx[edge_vertices[1]]);
             if vertices[x].edges.iter().any(|e|e.target_idx == y){
                 continue;
             }
 
-            vertices[x].edges.push(Edge { target_idx : y, weight: 0 });
+            vertices[x].edges.push(Edge { target_idx : y, weight });
             if !opt.directed || bidirected {
-                vertices[y].edges.push(Edge { target_idx : x, weight : 0});
+                vertices[y].edges.push(Edge { target_idx : x, weight });
             }
         };
         AdjacencyList { 
             vertices, 
             directed : opt.directed,
             weighted : opt.weighted,
+            nonnegative,
             vertex_label_idx : vertex_label_idx
         }
     }

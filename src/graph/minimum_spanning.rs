@@ -67,7 +67,7 @@ impl AdjacencyList {
         run!({
             distances[cur_idx] = VertState::InTree(distances[cur_idx].unwrap());
             for edge in &self.vertices[cur_idx].edges {
-                if parent_idxs[cur_idx].is_some_and(|idx| idx == edge.target_idx){
+                if let VertState::InTree(_) = distances[edge.target_idx] {
                     continue;
                 }
                 let old_distance = distances[edge.target_idx].get_or_insert(||{

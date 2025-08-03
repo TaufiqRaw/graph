@@ -14,7 +14,7 @@ fn main() {
             Some(p) => &prim[p].label,
             None => "None",
         }, p.distance);
-    }
+    };
     
     // let mut n_edge = 0usize;
     // graph.bfs("Mulligan", |v|{
